@@ -1,5 +1,5 @@
-// Command cloudmock-openstack runs the miscellaneous OpenStack mock services
-// implemented under cloudmock/openstack, prints their base endpoints, and
+// Command openstack-mock runs the miscellaneous OpenStack mock services
+// implemented under kops/cloudmock/openstack, prints their base endpoints, and
 // exposes a single dispatcher endpoint that forwards requests to the
 // appropriate mock service based on URI prefixes.
 //
@@ -98,47 +98,47 @@ func main() {
 	// Note: order matters; longer/more specific prefixes should be checked first.
 	var routes = map[string]*httputil.ReverseProxy{
 		// Compute (Nova)
-		"/servers/":                 computeProxy,
-		"/servers":                  computeProxy,
-		"/os-keypairs/":             computeProxy,
-		"/os-keypairs":              computeProxy,
-		"/flavors/":                 computeProxy,
-		"/flavors":                  computeProxy,
-		"/os-instance-actions/":     computeProxy, // included for completeness
+		"/servers/":             computeProxy,
+		"/servers":              computeProxy,
+		"/os-keypairs/":         computeProxy,
+		"/os-keypairs":          computeProxy,
+		"/flavors/":             computeProxy,
+		"/flavors":              computeProxy,
+		"/os-instance-actions/": computeProxy, // included for completeness
 		// Image (Glance)
-		"/images/":                  imageProxy,
-		"/images":                   imageProxy,
+		"/images/": imageProxy,
+		"/images":  imageProxy,
 		// BlockStorage (Cinder)
-		"/volumes/":                 blockProxy,
-		"/volumes":                  blockProxy,
-		"/types/":                   blockProxy,
-		"/types":                    blockProxy,
-		"/os-availability-zone":     blockProxy,
+		"/volumes/":             blockProxy,
+		"/volumes":              blockProxy,
+		"/types/":               blockProxy,
+		"/types":                blockProxy,
+		"/os-availability-zone": blockProxy,
 		// DNS (Designate)
-		"/zones/":                   dnsProxy,
-		"/zones":                    dnsProxy,
+		"/zones/": dnsProxy,
+		"/zones":  dnsProxy,
 		// Networking (Neutron)
-		"/networks/":                networkingProxy,
-		"/networks":                 networkingProxy,
-		"/ports/":                   networkingProxy,
-		"/ports":                    networkingProxy,
-		"/routers/":                 networkingProxy,
-		"/routers":                  networkingProxy,
-		"/security-groups/":         networkingProxy,
-		"/security-groups":          networkingProxy,
-		"/security-group-rules/":    networkingProxy,
-		"/security-group-rules":     networkingProxy,
-		"/subnets/":                 networkingProxy,
-		"/subnets":                  networkingProxy,
-		"/floatingips/":             networkingProxy,
-		"/floatingips":              networkingProxy,
+		"/networks/":             networkingProxy,
+		"/networks":              networkingProxy,
+		"/ports/":                networkingProxy,
+		"/ports":                 networkingProxy,
+		"/routers/":              networkingProxy,
+		"/routers":               networkingProxy,
+		"/security-groups/":      networkingProxy,
+		"/security-groups":       networkingProxy,
+		"/security-group-rules/": networkingProxy,
+		"/security-group-rules":  networkingProxy,
+		"/subnets/":              networkingProxy,
+		"/subnets":               networkingProxy,
+		"/floatingips/":          networkingProxy,
+		"/floatingips":           networkingProxy,
 		// LoadBalancer (Octavia)
-		"/lbaas/listeners/":         lbProxy,
-		"/lbaas/listeners":          lbProxy,
-		"/lbaas/loadbalancers/":     lbProxy,
-		"/lbaas/loadbalancers":      lbProxy,
-		"/lbaas/pools/":             lbProxy,
-		"/lbaas/pools":              lbProxy,
+		"/lbaas/listeners/":     lbProxy,
+		"/lbaas/listeners":      lbProxy,
+		"/lbaas/loadbalancers/": lbProxy,
+		"/lbaas/loadbalancers":  lbProxy,
+		"/lbaas/pools/":         lbProxy,
+		"/lbaas/pools":          lbProxy,
 	}
 
 	// Prepare ordered list of prefixes for deterministic matching
@@ -173,46 +173,60 @@ func main() {
 		}
 		catalog := []map[string]interface{}{
 			{
-				"id":   uuid.New().String(),
-				"type": "compute",
-				"name": "nova",
+				"id":        uuid.New().String(),
+				"type":      "compute",
+				"name":      "nova",
 				"endpoints": []map[string]interface{}{makeEndpoint(computeBase)},
 			},
 			{
-				"id":   uuid.New().String(),
-				"type": "network",
-				"name": "neutron",
+				"id":        uuid.New().String(),
+				"type":      "network",
+				"name":      "neutron",
 				"endpoints": []map[string]interface{}{makeEndpoint(networkingBase)},
 			},
 			{
-				"id":   uuid.New().String(),
-				"type": "load-balancer",
-				"name": "octavia",
+				"id":        uuid.New().String(),
+				"type":      "load-balancer",
+				"name":      "octavia",
 				"endpoints": []map[string]interface{}{makeEndpoint(lbBase)},
 			},
 			{
-				"id":   uuid.New().String(),
-				"type": "block-storage",
-				"name": "cinder",
+				"id":        uuid.New().String(),
+				"type":      "block-storage",
+				"name":      "cinder",
 				"endpoints": []map[string]interface{}{makeEndpoint(blockBase)},
 			},
 			{
-				"id":   uuid.New().String(),
-				"type": "dns",
-				"name": "designate",
+				"id":        uuid.New().String(),
+				"type":      "dns",
+				"name":      "designate",
 				"endpoints": []map[string]interface{}{makeEndpoint(dnsBase)},
 			},
 			{
-				"id":   uuid.New().String(),
-				"type": "image",
-				"name": "glance",
+				"id":        uuid.New().String(),
+				"type":      "image",
+				"name":      "glance",
 				"endpoints": []map[string]interface{}{makeEndpoint(imageBase)},
 			},
 			{
 				"id":   uuid.New().String(),
 				"type": "identity",
 				"name": "keystone",
-				"endpoints": []map[string]interface{}{makeEndpoint(func() string { base := fmt.Sprintf("%s://%s", func() string { if r.Header.Get("X-Forwarded-Proto") != "" { return r.Header.Get("X-Forwarded-Proto") }; if r.URL.Scheme != "" { return r.URL.Scheme }; if r.TLS != nil { return "https" }; return "http" }(), r.Host); return base + "/v3/identity" }())},
+				"endpoints": []map[string]interface{}{makeEndpoint(func() string {
+					base := fmt.Sprintf("%s://%s", func() string {
+						if r.Header.Get("X-Forwarded-Proto") != "" {
+							return r.Header.Get("X-Forwarded-Proto")
+						}
+						if r.URL.Scheme != "" {
+							return r.URL.Scheme
+						}
+						if r.TLS != nil {
+							return "https"
+						}
+						return "http"
+					}(), r.Host)
+					return base + "/v3/identity"
+				}())},
 			},
 		}
 		resp := map[string]interface{}{
@@ -241,7 +255,18 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		base := fmt.Sprintf("%s://%s", func() string { if r.Header.Get("X-Forwarded-Proto") != "" { return r.Header.Get("X-Forwarded-Proto") }; if r.URL.Scheme != "" { return r.URL.Scheme }; if r.TLS != nil { return "https" }; return "http" }(), r.Host)
+		base := fmt.Sprintf("%s://%s", func() string {
+			if r.Header.Get("X-Forwarded-Proto") != "" {
+				return r.Header.Get("X-Forwarded-Proto")
+			}
+			if r.URL.Scheme != "" {
+				return r.URL.Scheme
+			}
+			if r.TLS != nil {
+				return "https"
+			}
+			return "http"
+		}(), r.Host)
 		// Construct a lightweight, but plausible identity discovery document
 		resp := map[string]interface{}{
 			"identity": map[string]interface{}{
