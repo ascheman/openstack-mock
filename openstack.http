@@ -1,0 +1,36 @@
+### GET networks
+GET http://localhost:19090/networks/
+
+### POST request to create a network
+POST http://localhost:19090/networks
+Content-Type: application/json
+
+{
+  "network": {
+    "name": "test-net",
+    "admin_state_up": true,
+    "router:external": false
+  }
+}
+
+###
+
+### GET request to list servers
+GET http://localhost:19090/servers/detail
+
+### POST request to create a server
+POST http://localhost:19090/servers
+Content-Type: application/json
+
+{
+  "server": {
+    "name": "test-server",
+    "flavorRef": "flavor-id-123",
+    "networks": [
+      { "port": "port-id-123" }
+    ],
+    "metadata": {
+      "role": "worker"
+    }
+  }
+}
