@@ -85,6 +85,29 @@ make vet
 make test
 ----
 
+* Use a local kOps checkout via a `replace` in `go.mod`:
++
+[source]
+----
+# In go.mod, point k8s.io/kops to your local path
+replace k8s.io/kops => ../path/to/your/local/kops
+----
++
+TIP: You can also use go mod edit to set this programmatically:
++
+[source,bash]
+----
+go mod edit -replace=k8s.io/kops=../path/to/your/local/kops
+go mod tidy
+----
++
+A sample commented `replace` already exists in go.mod; adjust and uncomment it to match your local path.
++
+[IMPORTANT]
+====
+Do not check in the `replace` directive in go.mod.
+====
++
 * Clean build artifacts:
 +
 ----

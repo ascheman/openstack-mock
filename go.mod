@@ -9,6 +9,7 @@ require (
 )
 
 replace k8s.io/kops => github.com/ascheman/kops v1.33.0-feature-openstack-mock
+//replace k8s.io/kops => ../../kubernetes/kops
 
 require (
 	cloud.google.com/go/auth v0.16.2 // indirect
