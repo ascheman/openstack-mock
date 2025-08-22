@@ -144,8 +144,10 @@ func NewDispatcher(e Endpoints) http.Handler {
 		"/flavors":              computeProxy,
 		"/os-instance-actions/": computeProxy,
 		// Image (Glance)
-		"/images/": imageProxy,
-		"/images":  imageProxy,
+		"/v2/images/": imageProxy,
+		"/v2/images":  imageProxy,
+		"/images/":    imageProxy,
+		"/images":     imageProxy,
 		// BlockStorage (Cinder)
 		"/volumes/":             blockProxy,
 		"/volumes":              blockProxy,
@@ -156,6 +158,8 @@ func NewDispatcher(e Endpoints) http.Handler {
 		"/zones/": dnsProxy,
 		"/zones":  dnsProxy,
 		// Networking (Neutron)
+		"/v2.0/networks/":        networkingProxy,
+		"/v2.0/networks":         networkingProxy,
 		"/networks/":             networkingProxy,
 		"/networks":              networkingProxy,
 		"/ports/":                networkingProxy,
@@ -168,6 +172,8 @@ func NewDispatcher(e Endpoints) http.Handler {
 		"/security-group-rules":  networkingProxy,
 		"/subnets/":              networkingProxy,
 		"/subnets":               networkingProxy,
+		"/v2.0/floatingips/":     networkingProxy,
+		"/v2.0/floatingips":      networkingProxy,
 		"/floatingips/":          networkingProxy,
 		"/floatingips":           networkingProxy,
 		// LoadBalancer (Octavia)
@@ -208,14 +214,27 @@ func NewDispatcher(e Endpoints) http.Handler {
 				"url":       urlStr,
 			}
 		}
+		// Determine the external base URL of the dispatcher (scheme and host)
+		base := fmt.Sprintf("%s://%s", func() string {
+			if r.Header.Get("X-Forwarded-Proto") != "" {
+				return r.Header.Get("X-Forwarded-Proto")
+			}
+			if r.URL.Scheme != "" {
+				return r.URL.Scheme
+			}
+			if r.TLS != nil {
+				return "https"
+			}
+			return "http"
+		}(), r.Host)
 		catalog := []map[string]interface{}{
-			{"id": uuid.New().String(), "type": "compute", "name": "nova", "endpoints": []map[string]interface{}{makeEndpoint(e.Compute)}},
-			{"id": uuid.New().String(), "type": "network", "name": "neutron", "endpoints": []map[string]interface{}{makeEndpoint(e.Networking)}},
-			{"id": uuid.New().String(), "type": "load-balancer", "name": "octavia", "endpoints": []map[string]interface{}{makeEndpoint(e.LoadBalancer)}},
-			{"id": uuid.New().String(), "type": "block-storage", "name": "cinder", "endpoints": []map[string]interface{}{makeEndpoint(e.BlockStorage)}},
-			{"id": uuid.New().String(), "type": "dns", "name": "designate", "endpoints": []map[string]interface{}{makeEndpoint(e.DNS)}},
-			{"id": uuid.New().String(), "type": "image", "name": "glance", "endpoints": []map[string]interface{}{makeEndpoint(e.Image)}},
-			{"id": uuid.New().String(), "type": "identity", "name": "keystone", "endpoints": []map[string]interface{}{makeEndpoint("/v3/identity")}},
+			{"id": uuid.New().String(), "type": "compute", "name": "nova", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "network", "name": "neutron", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "load-balancer", "name": "octavia", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "block-storage", "name": "cinder", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "dns", "name": "designate", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "image", "name": "glance", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
+			{"id": uuid.New().String(), "type": "identity", "name": "keystone", "endpoints": []map[string]interface{}{makeEndpoint(base + "/v3/identity")}},
 		}
 		resp := map[string]interface{}{
 			"token": map[string]interface{}{

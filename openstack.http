@@ -1,3 +1,6 @@
+### Create a token with service catalog
+POST http://localhost:19090/v3/auth/tokens
+
 ### GET networks
 GET http://localhost:19090/networks/
 
