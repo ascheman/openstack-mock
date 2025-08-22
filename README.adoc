@@ -117,21 +117,21 @@ make clean
 
 == Docker build
 
-This repository includes a multi-stage Dockerfile and Makefile targets to build and publish a container image for the service.
+This repository includes a multi-stage Dockerfile and Makefile targets to build and publish a multi-platform container image (linux/amd64 and linux/arm64) for the service.
 
-Build the image (tags: latest and current branch):
+Build and push a multi-platform image (with tags: latest and current branch):
 
 ----
 make docker-build
 ----
 
-Optionally override the image name/registry:
+Optionally, overriding the image name/registry (will push a multi-arch manifest and images for amd64+arm64):
 
 ----
 IMAGE=ghcr.io/your-org/openstack-mock make docker-build
 ----
 
-Push both tags (latest and branch):
+Alternative alias (same as docker-build):
 
 ----
 IMAGE=ghcr.io/your-org/openstack-mock make docker-push
@@ -139,8 +139,10 @@ IMAGE=ghcr.io/your-org/openstack-mock make docker-push
 
 Notes:
 
-* Tagging: In addition to latest, the current git branch name is added as a tag. It is sanitized to be a valid Docker tag (lowercased, slashes/spaces to '-', others mapped to '-').
-* Runtime: The container runs as non-root in a minimal distroless image and the app listens on port 19090, binding to 0.0.0.0 inside the container.
+* Platforms: The build creates images  for `linux/amd64` and `linux/arm64` using Docker _Buildx_ and pushed as a multi-arch manifest.
+* Requirements: You need Docker Buildx enabled and a logged-in registry for pushing (e.g., `docker login ghcr.io`).
+* Tagging: In addition to `latest`, the build adds the current git branch name as a tag. It sanitizes the name to be a valid Docker tag (lowercased, slashes/spaces to `-`, others mapped to `-`).
+* Runtime: The container runs as non-root in a minimal distroless image, and the app listens on port 19090, binding to 0.0.0.0 inside the container.
 * Run locally:
 +
 ----

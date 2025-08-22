@@ -58,13 +58,14 @@ test: ## Run tests
 	$(GO) test ./...
 
 .PHONY: docker-build
-docker-build: ## Build Docker image tagged as latest and current branch
-	$(DOCKER) build -t $(IMAGE):latest -t $(IMAGE):$(BRANCH) .
+PLATFORMS ?= linux/amd64,linux/arm64
+
+docker-build: ## Build and push multi-platform (amd64,arm64) image tagged as latest and current branch
+	$(DOCKER) buildx build --platform $(PLATFORMS) -t $(IMAGE):latest -t $(IMAGE):$(BRANCH) --push .
 
 .PHONY: docker-push
-docker-push: docker-build ## Push Docker image tags latest and current branch
-	$(DOCKER) push $(IMAGE):latest
-	$(DOCKER) push $(IMAGE):$(BRANCH)
+docker-push: ## Alias for docker-build (multi-platform build & push)
+	$(MAKE) docker-build
 
 .PHONY: clean
 clean: ## Remove build artifacts
