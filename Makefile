@@ -7,6 +7,14 @@ BIN_DIR := bin
 BIN := $(BIN_DIR)/$(APP)
 GO := go
 
+# Docker configuration
+DOCKER ?= docker
+IMAGE ?= $(APP)
+# Determine current git branch (fallback to "local" if not in a git repo)
+BRANCH_RAW := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo local)
+# Sanitize branch to be a valid Docker tag: lowercase, replace slashes/spaces with '-', and map others to '-'
+BRANCH := $(shell echo $(BRANCH_RAW) | tr '[:upper:]' '[:lower:]' | tr '/ ' '--' | sed -E 's/[^a-z0-9._-]/-/g')
+
 # By default, show help
 .DEFAULT_GOAL := help
 
@@ -48,6 +56,15 @@ run: build ## Build and run the application
 .PHONY: test
 test: ## Run tests
 	$(GO) test ./...
+
+.PHONY: docker-build
+docker-build: ## Build Docker image tagged as latest and current branch
+	$(DOCKER) build -t $(IMAGE):latest -t $(IMAGE):$(BRANCH) .
+
+.PHONY: docker-push
+docker-push: docker-build ## Push Docker image tags latest and current branch
+	$(DOCKER) push $(IMAGE):latest
+	$(DOCKER) push $(IMAGE):$(BRANCH)
 
 .PHONY: clean
 clean: ## Remove build artifacts

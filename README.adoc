@@ -113,3 +113,38 @@ Do not check in the `replace` directive in go.mod.
 ----
 make clean
 ----
+
+
+== Docker build
+
+This repository includes a multi-stage Dockerfile and Makefile targets to build and publish a container image for the service.
+
+Build the image (tags: latest and current branch):
+
+----
+make docker-build
+----
+
+Optionally override the image name/registry:
+
+----
+IMAGE=ghcr.io/your-org/openstack-mock make docker-build
+----
+
+Push both tags (latest and branch):
+
+----
+IMAGE=ghcr.io/your-org/openstack-mock make docker-push
+----
+
+Notes:
+
+* Tagging: In addition to latest, the current git branch name is added as a tag. It is sanitized to be a valid Docker tag (lowercased, slashes/spaces to '-', others mapped to '-').
+* Runtime: The container runs as non-root in a minimal distroless image and the app listens on port 19090, binding to 0.0.0.0 inside the container.
+* Run locally:
++
+----
+docker run --rm -p 19090:19090 ghcr.io/your-org/openstack-mock:latest
+----
++
+Then access the service at http://localhost:19090/
