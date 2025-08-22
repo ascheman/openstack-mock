@@ -24,10 +24,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-http-utils/headers"
 	"github.com/google/uuid"
 	"k8s.io/klog/v2"
 	"k8s.io/kops/pkg/testutils"
 )
+
+const IdentityPath = "/v3/identity"
 
 func main() {
 	// Reduce klog noise unless overridden
@@ -199,7 +202,7 @@ func NewDispatcher(e Endpoints) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headers.ContentType, "application/json")
 		// Generate a token and set X-Subject-Token header as Keystone does.
 		tok := uuid.New().String()
 		w.Header().Set("X-Subject-Token", tok)
@@ -234,7 +237,7 @@ func NewDispatcher(e Endpoints) http.Handler {
 			{"id": uuid.New().String(), "type": "block-storage", "name": "cinder", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
 			{"id": uuid.New().String(), "type": "dns", "name": "designate", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
 			{"id": uuid.New().String(), "type": "image", "name": "glance", "endpoints": []map[string]interface{}{makeEndpoint(base)}},
-			{"id": uuid.New().String(), "type": "identity", "name": "keystone", "endpoints": []map[string]interface{}{makeEndpoint(base + "/v3/identity")}},
+			{"id": uuid.New().String(), "type": "identity", "name": "keystone", "endpoints": []map[string]interface{}{makeEndpoint(base + IdentityPath)}},
 		}
 		resp := map[string]interface{}{
 			"token": map[string]interface{}{
@@ -255,10 +258,10 @@ func NewDispatcher(e Endpoints) http.Handler {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headers.ContentType, "application/json")
 		base := fmt.Sprintf("%s://%s", func() string {
-			if r.Header.Get("X-Forwarded-Proto") != "" {
-				return r.Header.Get("X-Forwarded-Proto")
+			if r.Header.Get(headers.XForwardedProto) != "" {
+				return r.Header.Get(headers.XForwardedProto)
 			}
 			if r.URL.Scheme != "" {
 				return r.URL.Scheme
@@ -275,7 +278,7 @@ func NewDispatcher(e Endpoints) http.Handler {
 				"status":  "ok",
 				"updated": time.Now().UTC().Format(time.RFC3339),
 				"links": []map[string]string{
-					{"rel": "self", "href": base + "/v3/identity"},
+					{"rel": "self", "href": base + IdentityPath},
 				},
 			},
 		}
@@ -294,7 +297,7 @@ func NewDispatcher(e Endpoints) http.Handler {
 			tokenHandler(w, r)
 			return
 		}
-		if path == "/v3/identity" || strings.HasPrefix(path, "/v3/identity/") {
+		if path == IdentityPath || strings.HasPrefix(path, "/v3/identity/") {
 			identityHandler(w, r)
 			return
 		}

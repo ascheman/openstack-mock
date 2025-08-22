@@ -70,7 +70,7 @@ func TestIdentityEndpoint(t *testing.T) {
 	defer ts.Close()
 
 	// GET should be 200 and JSON
-	resp, err := http.Get(ts.URL + "/v3/identity")
+	resp, err := http.Get(ts.URL + IdentityPath)
 	if err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestIdentityEndpoint(t *testing.T) {
 	}
 
 	// HEAD should be 200
-	req, _ := http.NewRequest(http.MethodHead, ts.URL+"/v3/identity", nil)
+	req, _ := http.NewRequest(http.MethodHead, ts.URL+IdentityPath, nil)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("HEAD failed: %v", err)
@@ -93,7 +93,7 @@ func TestIdentityEndpoint(t *testing.T) {
 	}
 
 	// PUT should be 405
-	req, _ = http.NewRequest(http.MethodPut, ts.URL+"/v3/identity", nil)
+	req, _ = http.NewRequest(http.MethodPut, ts.URL+IdentityPath, nil)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("PUT failed: %v", err)
