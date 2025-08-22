@@ -1,0 +1,92 @@
+= OpenStack Mock Service
+:toc: left
+:toclevels: 2
+:icons: font
+
+This repository provides a small HTTP mock service to emulate selected OpenStack endpoints/behaviors for local development and testing.
+It uses existing https://kops.sigs.k8s.io[kOps] OpenStack test mock functions.
+The code is mostly glue code to expose these functions as a simple HTTP service.
+
+[NOTE]
+.LLM disclaimer
+====
+https://www.jetbrains.com/ai/[IntelliJ Junie LLM] created most of this codebase.
+====
+
+[plantuml, "Architecture Overview",svg]
+----
+include::openstack-double.puml[]
+----
+
+== Prerequisites
+
+* Go 1.25+ (as specified in xref:go.mod[])
+* Make (optional but recommended)
+
+== Build
+
+Using Make (recommended):
+
+----
+make deps
+make build
+----
+
+The build creates the binary at:
+
+* bin/openstack-mock
+
+Directly with Go (without Make):
+
+----
+go mod tidy
+go build -o bin/openstack-mock .
+----
+
+== Run
+
+Using Make:
+
+----
+make run
+----
+
+Directly:
+
+----
+./bin/openstack-mock
+----
+
+The service listens on 127.0.0.1:19090 by default.
+You can change the bind address and port via flags:
+
+`-listen`:: (default: `127.0.0.1`)
+`-port`:: (default: `19090`)
+
+Example:
+
+[src,bash]
+----
+./bin/openstack-mock -listen 0.0.0.0 -port 19091
+----
+
+== Quick test
+
+This repository provides a simple HTTP request collection in openstack.http (compatible with IntelliJ / GoLand / HTTP Client; standalone CLI: https://www.jetbrains.com/help/idea/http-client-cli.html[JetBrains HTTP Client CLI]).
+You can use it to quickly test endpoints once the server is running.
+
+== Development hints
+
+* Format, vet, and test:
++
+----
+make fmt
+make vet
+make test
+----
+
+* Clean build artifacts:
++
+----
+make clean
+----
