@@ -64,6 +64,48 @@ func main() {
 	fmt.Printf("  dns          (designate):   %s\n", dnsBase)
 	fmt.Printf("  image        (glance):      %s\n", imageBase)
 
+	dispatcher := NewDispatcher(Endpoints{
+		Compute:      computeBase,
+		Networking:   networkingBase,
+		LoadBalancer: lbBase,
+		BlockStorage: blockBase,
+		DNS:          dnsBase,
+		Image:        imageBase,
+	})
+
+	addr := fmt.Sprintf("%s:%d", *listen, *port)
+	server := &http.Server{Addr: addr, Handler: dispatcher}
+
+	go func() {
+		klog.Infof("Dispatcher listening on http://%s", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("dispatcher failed: %v", err)
+		}
+	}()
+
+	fmt.Println("Press Ctrl-C to stop.")
+
+	// Wait for termination signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+
+	klog.Infof("Shutting down OpenStack mock services...")
+}
+
+// Endpoints defines base URLs for each mock service backend.
+type Endpoints struct {
+	Compute      string
+	Networking   string
+	LoadBalancer string
+	BlockStorage string
+	DNS          string
+	Image        string
+}
+
+// NewDispatcher constructs the HTTP handler that serves token/identity endpoints
+// and proxies requests to the provided backend endpoints based on path prefixes.
+func NewDispatcher(e Endpoints) http.Handler {
 	// Build reverse proxies for each backend
 	mkProxy := func(base string) *httputil.ReverseProxy {
 		u, err := url.Parse(base)
@@ -76,9 +118,6 @@ func main() {
 			req.URL.Scheme = u.Scheme
 			req.URL.Host = u.Host
 			// Keep the original path and rawpath; backend muxes expect the same path prefixes
-			// (e.g., /images, /servers).
-			// Ensure we don't accidentally double-prefix; since backend Endpoint ends with '/',
-			// we don't join paths here.
 			if req.Header.Get("X-Forwarded-Host") == "" {
 				req.Header.Set("X-Forwarded-Host", req.Host)
 			}
@@ -87,16 +126,15 @@ func main() {
 		return rp
 	}
 
-	computeProxy := mkProxy(computeBase)
-	networkingProxy := mkProxy(networkingBase)
-	lbProxy := mkProxy(lbBase)
-	blockProxy := mkProxy(blockBase)
-	dnsProxy := mkProxy(dnsBase)
-	imageProxy := mkProxy(imageBase)
+	computeProxy := mkProxy(e.Compute)
+	networkingProxy := mkProxy(e.Networking)
+	lbProxy := mkProxy(e.LoadBalancer)
+	blockProxy := mkProxy(e.BlockStorage)
+	dnsProxy := mkProxy(e.DNS)
+	imageProxy := mkProxy(e.Image)
 
 	// Routing table: URI prefix -> proxy
-	// Note: order matters; longer/more specific prefixes should be checked first.
-	var routes = map[string]*httputil.ReverseProxy{
+	routes := map[string]*httputil.ReverseProxy{
 		// Compute (Nova)
 		"/servers/":             computeProxy,
 		"/servers":              computeProxy,
@@ -104,7 +142,7 @@ func main() {
 		"/os-keypairs":          computeProxy,
 		"/flavors/":             computeProxy,
 		"/flavors":              computeProxy,
-		"/os-instance-actions/": computeProxy, // included for completeness
+		"/os-instance-actions/": computeProxy,
 		// Image (Glance)
 		"/images/": imageProxy,
 		"/images":  imageProxy,
@@ -159,88 +197,32 @@ func main() {
 		// Generate a token and set X-Subject-Token header as Keystone does.
 		tok := uuid.New().String()
 		w.Header().Set("X-Subject-Token", tok)
-		// Build a minimal token document
 		// Build a minimal token document with a service catalog
 		region := "RegionOne"
-		makeEndpoint := func(url string) map[string]interface{} {
+		makeEndpoint := func(urlStr string) map[string]interface{} {
 			return map[string]interface{}{
 				"id":        uuid.New().String(),
 				"interface": "public",
 				"region":    region,
 				"region_id": region,
-				"url":       url,
+				"url":       urlStr,
 			}
 		}
 		catalog := []map[string]interface{}{
-			{
-				"id":        uuid.New().String(),
-				"type":      "compute",
-				"name":      "nova",
-				"endpoints": []map[string]interface{}{makeEndpoint(computeBase)},
-			},
-			{
-				"id":        uuid.New().String(),
-				"type":      "network",
-				"name":      "neutron",
-				"endpoints": []map[string]interface{}{makeEndpoint(networkingBase)},
-			},
-			{
-				"id":        uuid.New().String(),
-				"type":      "load-balancer",
-				"name":      "octavia",
-				"endpoints": []map[string]interface{}{makeEndpoint(lbBase)},
-			},
-			{
-				"id":        uuid.New().String(),
-				"type":      "block-storage",
-				"name":      "cinder",
-				"endpoints": []map[string]interface{}{makeEndpoint(blockBase)},
-			},
-			{
-				"id":        uuid.New().String(),
-				"type":      "dns",
-				"name":      "designate",
-				"endpoints": []map[string]interface{}{makeEndpoint(dnsBase)},
-			},
-			{
-				"id":        uuid.New().String(),
-				"type":      "image",
-				"name":      "glance",
-				"endpoints": []map[string]interface{}{makeEndpoint(imageBase)},
-			},
-			{
-				"id":   uuid.New().String(),
-				"type": "identity",
-				"name": "keystone",
-				"endpoints": []map[string]interface{}{makeEndpoint(func() string {
-					base := fmt.Sprintf("%s://%s", func() string {
-						if r.Header.Get("X-Forwarded-Proto") != "" {
-							return r.Header.Get("X-Forwarded-Proto")
-						}
-						if r.URL.Scheme != "" {
-							return r.URL.Scheme
-						}
-						if r.TLS != nil {
-							return "https"
-						}
-						return "http"
-					}(), r.Host)
-					return base + "/v3/identity"
-				}())},
-			},
+			{"id": uuid.New().String(), "type": "compute", "name": "nova", "endpoints": []map[string]interface{}{makeEndpoint(e.Compute)}},
+			{"id": uuid.New().String(), "type": "network", "name": "neutron", "endpoints": []map[string]interface{}{makeEndpoint(e.Networking)}},
+			{"id": uuid.New().String(), "type": "load-balancer", "name": "octavia", "endpoints": []map[string]interface{}{makeEndpoint(e.LoadBalancer)}},
+			{"id": uuid.New().String(), "type": "block-storage", "name": "cinder", "endpoints": []map[string]interface{}{makeEndpoint(e.BlockStorage)}},
+			{"id": uuid.New().String(), "type": "dns", "name": "designate", "endpoints": []map[string]interface{}{makeEndpoint(e.DNS)}},
+			{"id": uuid.New().String(), "type": "image", "name": "glance", "endpoints": []map[string]interface{}{makeEndpoint(e.Image)}},
+			{"id": uuid.New().String(), "type": "identity", "name": "keystone", "endpoints": []map[string]interface{}{makeEndpoint("/v3/identity")}},
 		}
 		resp := map[string]interface{}{
 			"token": map[string]interface{}{
 				"expires_at": time.Now().Add(1 * time.Hour).UTC().Format(time.RFC3339),
-				"project": map[string]string{
-					"id":   "mock-project-id",
-					"name": "mock",
-				},
-				"user": map[string]string{
-					"id":   "mock-user-id",
-					"name": "mock-user",
-				},
-				"catalog": catalog,
+				"project":    map[string]string{"id": "mock-project-id", "name": "mock"},
+				"user":       map[string]string{"id": "mock-user-id", "name": "mock-user"},
+				"catalog":    catalog,
 			},
 		}
 		b, _ := json.Marshal(resp)
@@ -287,7 +269,7 @@ func main() {
 		_, _ = w.Write(b)
 	}
 
-	dispatcher := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		if path == "/v3/auth/tokens" {
 			tokenHandler(w, r)
@@ -308,23 +290,4 @@ func main() {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte("no route for path: " + path + "\n"))
 	})
-
-	addr := fmt.Sprintf("%s:%d", *listen, *port)
-	server := &http.Server{Addr: addr, Handler: dispatcher}
-
-	go func() {
-		klog.Infof("Dispatcher listening on http://%s", addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("dispatcher failed: %v", err)
-		}
-	}()
-
-	fmt.Println("Press Ctrl-C to stop.")
-
-	// Wait for termination signal
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-
-	klog.Infof("Shutting down OpenStack mock services...")
 }

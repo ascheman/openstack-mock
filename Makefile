@@ -52,3 +52,4 @@ test: ## Run tests
 .PHONY: clean
 clean: ## Remove build artifacts
 	rm -rf $(BIN_DIR)
+	go clean -testcache
