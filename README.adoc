@@ -161,6 +161,15 @@ A GitHub workflow builds a multi-architecture container image for this project a
 
 NOTE: We currently only provide private images on the registry repository.
 
+[IMPORTANT]
+====
+To allow the GitHub Action to publish to GHCR using GITHUB_TOKEN, ensure:
+
+* Repository settings: Actions > General > Workflow permissions = Read and write permissions.
+* Organization/Repository package settings: Allow GitHub Actions to create and update packages in GHCR.
+* Forks: Workflows in forks will push to their own GHCR namespace (ghcr.io/<fork-owner>/openstack-mock) due to dynamic owner selection.
+====
+
 
 == License
 

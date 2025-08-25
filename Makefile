@@ -15,6 +15,15 @@ IMAGE ?= $(APP)
 BRANCH_RAW := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo local)
 # Sanitize branch to be a valid Docker tag: lowercase, replace slashes/spaces with '-', and map others to '-'
 BRANCH := $(shell echo $(BRANCH_RAW) | tr '[:upper:]' '[:lower:]' | tr '/ ' '--' | sed -E 's/[^a-z0-9._-]/-/g')
+# Short commit SHA for tagging
+SHORT_SHA := $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo dev)
+
+# Compute tag list: on main -> latest and SHA; others -> branch and SHA
+ifeq ($(BRANCH),main)
+TAGS := -t $(IMAGE):latest -t $(IMAGE):$(SHORT_SHA)
+else
+TAGS := -t $(IMAGE):$(BRANCH) -t $(IMAGE):$(SHORT_SHA)
+endif
 
 # By default, show help
 .DEFAULT_GOAL := help
@@ -61,8 +70,8 @@ test: ## Run tests
 .PHONY: docker-build
 PLATFORMS ?= linux/amd64,linux/arm64
 
-docker-build: ## Build and push multi-platform (amd64,arm64) image tagged as latest and current branch
-	$(DOCKER) buildx build --platform $(PLATFORMS) -t $(IMAGE):latest -t $(IMAGE):$(BRANCH) --push .
+docker-build: ## Build and push multi-platform (amd64,arm64) image tagged as per branch (main=latest+sha, others=branch+sha)
+	$(DOCKER) buildx build --platform $(PLATFORMS) $(TAGS) --push .
 
 .PHONY: docker-push
 docker-push: ## Alias for docker-build (multi-platform build & push)

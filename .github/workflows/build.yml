@@ -32,49 +32,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute tags
-        id: meta
-        shell: bash
+      - name: Build and push via Makefile
         run: |
           set -euo pipefail
-          IMAGE="ghcr.io/uhurutec/openstack-mock"
-          REF="${GITHUB_REF_TYPE}:${GITHUB_REF_NAME}"
-          SHORT_SHA="${GITHUB_SHA::7}"
-
-          # sanitize function similar to Makefile: lowercase, replace '/' and ' ' with '-', map others to '-'
-          sanitize() {
-            echo "$1" | tr '[:upper:]' '[:lower:]' | tr '/ ' '--' | sed -E 's/[^a-z0-9._-]/-/g'
-          }
-
-          TAGS=()
-
-          if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "main" ]]; then
-            # On main, use the fixed tag 'latest'
-            TAGS+=("${IMAGE}:latest")
-          elif [[ "${GITHUB_REF_TYPE}" == "branch" ]]; then
-            BRANCH_TAG=$(sanitize "${GITHUB_REF_NAME}")
-            TAGS+=("${IMAGE}:${BRANCH_TAG}")
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            # If a tag is pushed, publish the same tag
-            TAGS+=("${IMAGE}:${GITHUB_REF_NAME}")
-          fi
-
-          # Always add the short commit SHA tag
-          TAGS+=("${IMAGE}:${SHORT_SHA}")
-
-          # Export outputs
-          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
-          # join by comma for docker/build-push-action
-          TAGS_CSV=$(IFS=, ; echo "${TAGS[*]}")
-          echo "tags=${TAGS_CSV}" >> $GITHUB_OUTPUT
-
-          echo "Computed tags: ${TAGS_CSV} (ref=${REF})"
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          provenance: false  # disable attestations for simplicity
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/openstack-mock" make docker-push
