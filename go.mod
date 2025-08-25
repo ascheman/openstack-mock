@@ -3,12 +3,13 @@ module github.com/ascheman/openstack-mock
 go 1.25.0
 
 require (
+	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/google/uuid v1.6.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kops v1.32.0
 )
 
-replace k8s.io/kops => github.com/ascheman/kops v1.33.0-feature-openstack-mock
+replace k8s.io/kops => github.com/uhurutec/kops v1.33.0-feature-openstack-mock
 
 //replace k8s.io/kops => ../../kubernetes/kops
 
@@ -61,7 +62,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
-	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
