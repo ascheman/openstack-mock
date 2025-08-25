@@ -152,6 +152,16 @@ docker run --rm -p 19090:19090 ghcr.io/your-org/openstack-mock:latest
 Then access the service at http://localhost:19090/
 
 
+== Container image on (GHCR)
+
+A GitHub workflow builds a multi-architecture container image for this project and publishes to it to GitHub Container Registry (GHCR) as `ghcr.io/uhurutec/openstack-mock`
+
+* The build tags images on the main branch by `latest` and the short commit SHA.
+* On other branches the build tags the image with a branch-based name and the short commit SHA.
+
+NOTE: We currently only provide private images on the registry repository.
+
+
 == License
 
 This project is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
