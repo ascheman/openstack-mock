@@ -36,4 +36,5 @@ jobs:
         # For some reason, pushing is not working with buildx as of 2025-08-25
         run: |
           set -euo pipefail
-          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/openstack-mock" make docker-build
+          make test
+          # IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/openstack-mock" make docker-build
