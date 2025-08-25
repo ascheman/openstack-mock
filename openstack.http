@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 ### Create a token with service catalog
 POST http://localhost:19090/v3/auth/tokens
 

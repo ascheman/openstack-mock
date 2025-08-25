@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 module github.com/ascheman/openstack-mock
 
 go 1.25.0

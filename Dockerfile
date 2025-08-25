@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Multi-stage Dockerfile for openstack-mock
 # Builder stage
 FROM --platform=$BUILDPLATFORM golang:1.25 AS builder

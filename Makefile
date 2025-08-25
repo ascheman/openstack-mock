@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Makefile for github.com/ascheman/openstack-mock
 # Common development targets: build, tidy, clean, etc.
 

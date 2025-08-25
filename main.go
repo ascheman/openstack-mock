@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Command openstack-mock runs the miscellaneous OpenStack mock services
 // implemented under kops/cloudmock/openstack, prints their base endpoints, and
 // exposes a single dispatcher endpoint that forwards requests to the
